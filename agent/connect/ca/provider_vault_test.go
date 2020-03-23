@@ -397,6 +397,8 @@ func testVaultProviderWithConfig(t *testing.T, isPrimary bool, rawConf map[strin
 
 var printedVaultVersion sync.Once
 
+var mustAlwaysRun = os.Getenv("CI") == "true"
+
 // skipIfVaultNotPresent skips the test and returns true if vault is not found
 func skipIfVaultNotPresent(t *testing.T) bool {
 	vaultBinaryName := os.Getenv("VAULT_BINARY_NAME")
@@ -406,6 +408,9 @@ func skipIfVaultNotPresent(t *testing.T) bool {
 
 	path, err := exec.LookPath(vaultBinaryName)
 	if err != nil || path == "" {
+		if mustAlwaysRun {
+			t.Fatalf("%q not found on $PATH", vaultBinaryName)
+		}
 		t.Skipf("%q not found on $PATH - download and install to run this test", vaultBinaryName)
 		return true
 	}
