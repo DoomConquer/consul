@@ -256,7 +256,14 @@ to run the sync program.
   * <a name="v-synccatalog-tok8s" href="#v-synccatalog-tok8s">`toK8S`</a> (`boolean: true`) - If true, will sync Consul services to Kubernetes. This can be disabled to have a one-way sync.
 
   * <a name="v-synccatalog-k8sprefix" href="#v-synccatalog-k8sprefix">`k8sPrefix`</a> (`string: ""`) - A prefix to prepend to all services registered in Kubernetes from Consul. This defaults to `""` where no prefix is prepended; Consul services are synced with the same name to Kubernetes. (Consul -> Kubernetes sync only)
-  
+
+  * <a name="v-synccatalog-addk8snamespacesuffix" href="#v-synccatalog-addk8snamespacesuffix">`addK8SNamespaceSuffix`</a> (`boolean: true`) - ** `addK8SNamespaceSuffix` appends Kubernetes namespace suffix to each service
+  name synced to Consul, separated by a dash. For example, for a service 'foo'
+  in the default namespace, the sync process will create a Consul service named
+  'foo-default'. Set this flag to true to avoid registering services with the
+  same name but in different namespaces as instances for the same Consul service.
+  Namespace suffix is not added if `annotationServiceName` is provided.
+
   * <a name="v-synccatalog-k8sallownamespaces" href="#v-synccatalog-k8sallownamespaces">`k8sAllowNamespaces`</a> (`[]string: ["*"]`) - list of k8s namespaces to sync the k8s services from. If a k8s namespace is not included in this list or is listed in `k8sDenyNamespaces`, services in that k8s namespace will not be synced even if they are explicitly annotated. Use `["*"]` to automatically allow all k8s namespaces.
      
          For example, `["namespace1", "namespace2"]` will only allow services in the k8s namespaces `namespace1` and `namespace2` to be synced and registered with Consul. All other k8s namespaces will be ignored.
@@ -264,8 +271,8 @@ to run the sync program.
          Note: `k8sDenyNamespaces` takes precedence over values defined here. Requires consul-k8s v0.12+
          
   * <a name="v-synccatalog-k8sdenynamespaces" href="#v-synccatalog-k8sdenynamespaces">`k8sDenyNamespaces`</a> (`[]string: ["kube-system", "kube-public"]` - list of k8s namespaces that should not have their services synced. This list takes precedence over `k8sAllowNamespaces`. `*` is not supported because then nothing would be allowed to sync. Requires consul-k8s v0.12+.
-  
-        For example, if `k8sAllowNamespaces` is `["*"]` and `k8sDenyNamespaces` is `["namespace1", "namespace2"]`, then all k8s namespaces besides `namespace1` and `namespace2` will be synced. 
+
+        For example, if `k8sAllowNamespaces` is `["*"]` and `k8sDenyNamespaces` is `["namespace1", "namespace2"]`, then all k8s namespaces besides `namespace1` and `namespace2` will be synced.
 
   * <a name="v-synccatalog-k8ssourcenamespace" href="#v-synccatalog-k8ssourcenamespace">`k8sSourceNamespace`</a> (`string: ""`) - **[DEPRECATED] Use `k8sAllowNamespaces` and `k8sDenyNamespaces` instead.** `k8sSourceNamespace` is the Kubernetes namespace to watch for service changes and sync to Consul. If this is not set then it will default to all namespaces.
   
@@ -290,6 +297,16 @@ to run the sync program.
       - <a name="v-synccatalog-acl-sync-token-secret-name" href="#v-synccatalog-acl-sync-token-secret-name">secretName </a>`(string: null)` - The name of the Kubernetes secret. This defaults to null.
 
       - <a name="v-synccatalog-acl-sync-token-secret-key" href="#v-synccatalog-acl-sync-token-secret-key">secretKey </a>`(string: null)` - The key for the Kubernetes secret. This defaults to null.
+
+  * <a name="v-synccatalog-nodeselector" href="#v-synccatalog-nodeselector">`nodeSelector`</a> `(string: null)` - labels for syncCatalog pod assignment, formatted as a multi-line string.
+  ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+  Example:
+  nodeSelector: |
+    beta.kubernetes.io/arch: amd64
+
+  * <a name="v-synccatalog-loglevel" href="#v-synccatalog-loglevel">`logLevel`</a> `(string: info)` - Log verbosity level. One of "trace", "debug", "info", "warn", or "error".
+
+  * <a name="v-synccatalog-consulwriteinterval" href="#v-synccatalog-consulwriteinterval">`consulWriteInterval`</a> `(string: null)` - Override the default interval to perform syncing operations creating Consul services.
 
 * <a name="v-ui" href="#v-ui">`ui`</a> - Values that configure the Consul UI.
 
@@ -328,9 +345,9 @@ to run the sync program.
         ```
 
   * <a name="v-connectinject-k8sallownamespaces" href="#v-connectinject-k8sallownamespaces">`k8sAllowNamespaces`</a> - list of k8s namespaces to allow Connect sidecar injection in. If a k8s namespace is not included or is listed in `k8sDenyNamespaces`, pods in that k8s namespace will not be injected even if they are explicitly annotated. Use `["*"]` to automatically allow all k8s namespaces.
-  
-        For example, `["namespace1", "namespace2"]` will only allow pods in the k8s namespaces `namespace1` and `namespace2` to have Connect sidecars injected and registered with Consul. All other k8s namespaces will be ignored. 
-        
+
+        For example, `["namespace1", "namespace2"]` will only allow pods in the k8s namespaces `namespace1` and `namespace2` to have Connect sidecars injected and registered with Consul. All other k8s namespaces will be ignored.
+
         Note: `k8sDenyNamespaces` takes precedence over values defined here and `namespaceSelector` takes precedence over both since it is applied first. `kube-system` and `kube-public` are never injected, even if included here. Requires consul-k8s v0.12+
         
   * <a name="v-connectinject-k8sdenynamespaces" href="#v-connectinject-k8sdenynamespaces">`k8sDenyNamespaces`</a> - list of k8s namespaces that should not allow Connect sidecar injection. This list takes precedence over `k8sAllowNamespaces`. `*` is not supported because then nothing would be allowed to be injected.
@@ -368,10 +385,18 @@ to run the sync program.
       The name of the private key for the certificate file within the
       `secretName` secret.
 
+  * <a name="v-connectinject-nodeselector" href="#v-connectinject-nodeselector">`nodeSelector`</a> `(string: null)` - labels for connectInject pod assignment, formatted as a muli-line string.
+  ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+  Example:
+  nodeSelector: |
+    beta.kubernetes.io/arch: amd64
+
   * <a name="v-connectinject-acl-bindingrule-selector" href="#v-connectinject-acl-bindingrule-selector">`aclBindingRuleSelector`</a> (`string: "serviceaccount.name!=default"`) -
   A [selector](/docs/acl/acl-auth-methods.html#binding-rules) for restricting automatic injection to only matching services based on
   their associated service account. By default, services using the `default` Kubernetes service account will not have a proxy injected.
-  
+
+  * <a name="v-connectinject-override-auth-method-name" href="#v-connectinject-override-auth-method-name">`overrideAuthMethodNmae`</a> (`string: null`) - If not using global.bootstrapACLs and instead manually setting up an auth method for Connect inject, set this to the name of your auth method.
+
   * <a name="v-connectinject-aclinjecttoken" href="#v-connectinject-aclinjecttoken">`aclInjectToken`</a> - Refers to a Kubernetes secret that you have created that contains an ACL token for your Consul cluster which allows the Connect injector the correct permissions. This is only needed if Consul namespaces and ACLs are enabled on the Consul cluster and you are not setting `global.bootstrapACLs` to `true`. This token needs to have `operator = "write"` privileges so that it can create namespaces.
   
       - <a name="v-connectinject-aclinjecttoken-secretname" href="#v-synccatalog-aclinjecttoken-secretname">secretName </a>`(string: null)` - The name of the Kubernetes secret.
@@ -403,7 +428,43 @@ to run the sync program.
             "envoy_dogstatsd_url": "udp://127.0.0.1:9125"
           }
         ```
+* <a name="v-meshgateway" href="#v-meshgateway">`meshGateway`</a> - Mesh Gateways enable Consul service mesh to work across Consul datacenters.
 
+  * <a name="v-meshgateway-enabled" href="#v-meshgateway-enabled">`enabled`</a> (`boolean: false`) - If mesh gateways are enabled, a Deployment will be created that runs gateways and Consul Connect will be configured to use gateways. See <a href="https://www.consul.io/docs/connect/mesh_gateway.html">https://www.consul.io/docs/connect/mesh_gateway.html</a> Requirements: consul >= 1.6.0 and consul-k8s >= 0.9.0 if using global.bootstrapACLs.
+
+  * <a name="v-meshgateway-globalmode" href="#v-meshgateway-globalmode">`globalMode`</a> (`string: "local"`) - Globally configure which mode the gateway should run in. Can be set to either "remote", "local", "none" or empty string or null. See https://consul.io/docs/connect/mesh_gateway.html#modes-of-operation for a description of each mode. If set to anything other than "" or null, connectInject.centralConfig.enabled should be set to true so that the global config will actually be used. If set to the empty string, no global default will be set and the gateway mode will need to be set individually for each service.
+
+  * <a name="v-meshgateway-replicas" href="#v-meshgateway-replicas">`replicas`</a> (`integer: 2`) - Number of replicas for the Deployment.
+
+  * <a name="v-meshgateway-wanaddress" href="#v-meshgateway-wanaddress">`wanAddress`</a> - What gets registered as WAN address for the gateway.
+
+      - <a name="v-meshgateway-wanaddress-port" href="#v-meshgateway-wanaddress-port">`port`</a> (`integer: 443`) - Port that gets registered.
+
+      - <a name="v-meshgateway-wanaddress-use-node-ip" href="#v-meshgateway-wanaddress-use-node-ip">`useNodeIP`</a> (`boolean: true`) - If true, each Gateway Pod will advertise its NodeIP (as provided by the Kubernetes downward API) as the wan address. This is useful if the node IPs are routable from other DCs. useNodeName and host must be false and "" respectively.
+
+      - <a name="v-meshgateway-wanaddress-use-node-name" href="#v-meshgateway-wanaddress-use-node-name">`useNodeName`</a> (`boolean: false`) - If true, each Gateway Pod will advertise its NodeName (as provided by the Kubernetes downward API) as the wan address. This is useful if the node names are DNS entries that are routable from other DCs. meshGateway.wanAddress.port will be used as the port for the wan address. useNodeIP and host must be false and "" respectively.
+
+      - <a name="v-meshgateway-wanaddress-host" href="#v-meshgateway-wanaddress-host">`host`</a> (`string: ""`) - If set, each gateway Pod will use this host as its wan address. Users must ensure that this address routes to the Gateway pods, for example via a DNS entry that routes to the Service fronting the Deployment. meshGateway.wanAddress.port will be used as the port for the wan address. useNodeIP and useNodeName must be false.
+
+  * <a name="v-meshgateway-service" href="#v-meshgateway-service">`service`</a> - The service option configures the Service that fronts the Gateway Deployment.
+
+      - <a name="v-meshgateway-service-enabled" href="#v-meshgateway-service-enabled">`enabled`</a> (`boolean: false`) - Whether to create a Service or not.
+
+      - <a name="v-meshgateway-service-type" href="#v-meshgateway-service-type">`type`</a> (`string: "ClusterIP"`) - Type of service, ex. LoadBalancer, ClusterIP.
+
+      - <a name="v-meshgateway-service-port" href="#v-meshgateway-service-port">`port`</a> (`integer: 443`) - Port that the service will be exposed on. The targetPort will be set to meshGateway.containerPort.
+
+      - <a name="v-meshgateway-service-nodeport" href="#v-meshgateway-service-nodeport">`nodePort`</a> (`boolean: null`) - Optional nodePort of the service. Can be used in conjunction with type: NodePort.
+
+      - <a name="v-meshgateway-service-annotations" href="#v-meshgateway-service-annotations">`annotations`</a> (`string: null`) - Optional YAML string for additional annotations.
+
+      - <a name="v-meshgateway-service-additionalspec" href="#v-meshgateway-service-additionalspec">`additionalSpec`</a> (`string: null`) - Optional YAML string that will be appended to the Service spec.
+
+  * <a name="v-meshgateway-imageenvoy" href="#v-meshgateway-imageenvoy">`imageEnvoy`</a> (`string: "envoyproxy/envoy:v1.13.0"`) - Envoy image to use. For Consul v1.7+, Envoy version 1.13+ is required.
+
+  * <a name="v-meshgateway-hostnetwork" href="#v-meshgateway-hostnetwork">`hostNetwork`</a> (`boolean: false`) - If set to true, gateway Pods will run on the host network.
+
+  * <a name="v-meshgateway-dnspolicy" href="#v-meshgateway-dnspolicy">`dnsPolicy`</a> (`string: null`) - dnsPolicy to use.
 
 ## Helm Chart Examples
 
